@@ -36,7 +36,6 @@ def generate_vehicle_data(i):
     location = generate_random_location()
     fuel_level = random.uniform(0, 100)  # Fuel level percentage
     engine_temp = random.uniform(70, 110)  # Engine temperature in Celsius
-    tire_pressure = [random.uniform(30, 35) for _ in range(4)]  # Tire pressure for each tire
     battery_voltage = random.uniform(12, 14)  # Battery voltage in volts
     mileage = random.uniform(10000, 100000)  # Total distance traveled in kilometers
     oil_level = random.uniform(50, 100)  # Oil level percentage
@@ -52,7 +51,6 @@ def generate_vehicle_data(i):
         "location": location,
         "fuel_level": round(fuel_level, 2),
         "engine_temp": round(engine_temp, 2),
-        "tire_pressure": tire_pressure,
         "battery_voltage": round(battery_voltage, 2),
         "mileage": round(mileage, 2),
         "oil_level": round(oil_level, 2),
@@ -75,7 +73,6 @@ def create_table(cursor,conn):
         longitude FLOAT,
         fuel_level FLOAT,
         engine_temp FLOAT,
-        tire_pressure FLOAT[],
         battery_voltage FLOAT,
         mileage FLOAT,
         oil_level FLOAT,
@@ -97,19 +94,18 @@ def insert_value(cursor,conn,data):
         longitude ,
         fuel_level ,
         engine_temp ,
-        tire_pressure ,
         battery_voltage ,
         mileage ,
         oil_level ,
         driving_mode ,
         engine_status ,
         vehicle_type )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         (
             data['vehicle_id'] ,data['timestamp'], data['speed'], 
             data['location'][0], data['location'][1], data['fuel_level'], 
-            data['engine_temp'], data['tire_pressure'], 
+            data['engine_temp'], 
             data['battery_voltage'], data['mileage'], 
             data['oil_level'], data['driving_mode'], 
             data['engine_status'], data['vehicle_type']
