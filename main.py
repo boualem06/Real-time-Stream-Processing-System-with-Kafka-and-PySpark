@@ -6,17 +6,26 @@ from geopy.distance import geodesic
 
 import psycopg2
 from psycopg2.extras import execute_values
+from confluent_kafka import SerializingProducer
 
-nb_vehiculs=100
 
+
+nb_vehiculs=10
 paris_center = (48.8566, 2.3522)
+
+
+def delivery_report(err, msg):
+    if err is not None:
+        print(f'Message delivery failed: {err}')
+    else:
+        print(f'Message delivered to {msg.topic()} [{msg.partition()}]')
+
+
 def generate_random_location():
     base_location = paris_center  
     random_offset = random.uniform(-0.05, 0.05)
     new_location = (base_location[0] + random_offset, base_location[1] + random_offset)
     return new_location
-
-
 
 
 
@@ -105,6 +114,9 @@ def insert_value(cursor,conn,data):
         )
     conn.commit()
 
+
+
+
 if __name__ == "__main__":
 
     # Connect to PostgreSQL
@@ -115,7 +127,11 @@ if __name__ == "__main__":
         host="localhost",
         port=5432
     )
+
+    producer = SerializingProducer({'bootstrap.servers': 'localhost:9092', })
     cursor = conn.cursor()
+
+
 
     # create the database of vehicle_telemetry 
     create_table(cursor,conn)
@@ -124,7 +140,16 @@ if __name__ == "__main__":
     for i in range(nb_vehiculs):
         data=generate_vehicle_data()
         insert_value(cursor,conn,data)
+        producer.produce(
+            "vehicles_topic",
+            key= f'{i}',
+            value=json.dumps(data),
+            on_delivery=delivery_report
+        )
         print(f' iserted the {i} value ')
+        producer.flush()
+    cursor.close()
+    conn.close()
 
     
 
