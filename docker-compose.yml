@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15  # Replace with the desired PostgreSQL version
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin        # PostgreSQL username
+      POSTGRES_PASSWORD: admin    # PostgreSQL password
+      POSTGRES_DB: telemetry      # Database name
+    ports:
+      - "5432:5432"               # Expose PostgreSQL on localhost:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist data in a volume
+    restart: always               # Always restart the container if it stops
+
+volumes:
+  postgres_data:

@@ -4,6 +4,10 @@ import json
 from datetime import datetime
 from geopy.distance import geodesic
 
+import psycopg2
+from psycopg2.extras import execute_values
+
+nb_vehiculs=100
 
 paris_center = (48.8566, 2.3522)
 def generate_random_location():
@@ -17,7 +21,7 @@ def generate_random_location():
 
 
 # Function to generate random vehicle data
-def generate_vehicle_data(vehicle_id):
+def generate_vehicle_data():
     timestamp = datetime.now().isoformat()  # Timestamp in ISO format
     speed = random.uniform(0, 120)  # Speed in km/h
     location = generate_random_location()
@@ -33,7 +37,6 @@ def generate_vehicle_data(vehicle_id):
 
        # Create a dictionary with the generated data
     data = {
-        "vehicle_id": vehicle_id,
         "timestamp": timestamp,
         "speed": round(speed, 2),
         "location": location,
@@ -50,8 +53,79 @@ def generate_vehicle_data(vehicle_id):
     return data
 
 
+def create_table(cursor,conn):
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS vehicle_telemetry(
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMP,
+        speed FLOAT,
+        latitude FLOAT,
+        longitude FLOAT,
+        fuel_level FLOAT,
+        engine_temp FLOAT,
+        tire_pressure FLOAT[],
+        battery_voltage FLOAT,
+        mileage FLOAT,
+        oil_level FLOAT,
+        driving_mode VARCHAR(20),
+        engine_status BOOLEAN,
+        vehicle_type VARCHAR(20)
+    ) ;
+    """)
+    conn.commit()
+
+def insert_value(cursor,conn,data):
+    cursor.execute("""
+        INSERT INTO vehicle_telemetry
+        (
+        timestamp,
+        speed ,
+        latitude ,
+        longitude ,
+        fuel_level ,
+        engine_temp ,
+        tire_pressure ,
+        battery_voltage ,
+        mileage ,
+        oil_level ,
+        driving_mode ,
+        engine_status ,
+        vehicle_type )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (
+            data['timestamp'], data['speed'], 
+            data['location'][0], data['location'][1], data['fuel_level'], 
+            data['engine_temp'], data['tire_pressure'], 
+            data['battery_voltage'], data['mileage'], 
+            data['oil_level'], data['driving_mode'], 
+            data['engine_status'], data['vehicle_type']
+        )
+        )
+    conn.commit()
+
 if __name__ == "__main__":
-    vehicle_ids = ["V123", "V124", "V125", "V126", "V127"]
-    for vehicle_id in vehicle_ids:
-        data=generate_vehicle_data(vehicle_id)
-        print(json.dumps(data, indent=4))
+
+    # Connect to PostgreSQL
+    conn = psycopg2.connect(
+        dbname="telemetry",
+        user="admin",
+        password="admin",
+        host="localhost",
+        port=5432
+    )
+    cursor = conn.cursor()
+
+    # create the database of vehicle_telemetry 
+    create_table(cursor,conn)
+
+    #insert the data into the vehicle_telemetry database 
+    for i in range(nb_vehiculs):
+        data=generate_vehicle_data()
+        insert_value(cursor,conn,data)
+        print(f' iserted the {i} value ')
+
+    
+
+    
