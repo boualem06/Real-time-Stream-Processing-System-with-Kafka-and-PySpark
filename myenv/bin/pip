@@ -1,0 +1,10 @@
+#!/bin/sh
+'''exec' "/home/blm/learning/cars_stream_project /Real-time-Stream-Processing-System-with-Kafka-and-PySpark/myenv/bin/python3" "$0" "$@"
+' '''
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pip._internal.cli.main import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
