@@ -30,7 +30,7 @@ def generate_random_location():
 
 
 # Function to generate random vehicle data
-def generate_vehicle_data():
+def generate_vehicle_data(i):
     timestamp = datetime.now().isoformat()  # Timestamp in ISO format
     speed = random.uniform(0, 120)  # Speed in km/h
     location = generate_random_location()
@@ -46,6 +46,7 @@ def generate_vehicle_data():
 
        # Create a dictionary with the generated data
     data = {
+        "vehicle_id":i,
         "timestamp": timestamp,
         "speed": round(speed, 2),
         "location": location,
@@ -67,6 +68,7 @@ def create_table(cursor,conn):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS vehicle_telemetry(
         id SERIAL PRIMARY KEY,
+        vehicle_id FLOAT ,
         timestamp TIMESTAMP,
         speed FLOAT,
         latitude FLOAT,
@@ -88,6 +90,7 @@ def insert_value(cursor,conn,data):
     cursor.execute("""
         INSERT INTO vehicle_telemetry
         (
+        vehicle_id,
         timestamp,
         speed ,
         latitude ,
@@ -101,10 +104,10 @@ def insert_value(cursor,conn,data):
         driving_mode ,
         engine_status ,
         vehicle_type )
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         (
-            data['timestamp'], data['speed'], 
+            data['vehicle_id'] ,data['timestamp'], data['speed'], 
             data['location'][0], data['location'][1], data['fuel_level'], 
             data['engine_temp'], data['tire_pressure'], 
             data['battery_voltage'], data['mileage'], 
@@ -138,11 +141,11 @@ if __name__ == "__main__":
 
     #insert the data into the vehicle_telemetry database 
     for i in range(nb_vehiculs):
-        data=generate_vehicle_data()
+        data=generate_vehicle_data(i+1)
         insert_value(cursor,conn,data)
         producer.produce(
             "vehicles_topic",
-            key= f'{i}',
+            key= f'{i+1}',
             value=json.dumps(data),
             on_delivery=delivery_report
         )
