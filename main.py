@@ -48,7 +48,8 @@ def generate_vehicle_data(i):
         "vehicle_id":i,
         "timestamp": timestamp,
         "speed": round(speed, 2),
-        "location": location,
+        "latitude": location[0],
+        "longitude": location[1],
         "fuel_level": round(fuel_level, 2),
         "engine_temp": round(engine_temp, 2),
         "battery_voltage": round(battery_voltage, 2),
@@ -104,7 +105,7 @@ def insert_value(cursor,conn,data):
         """,
         (
             data['vehicle_id'] ,data['timestamp'], data['speed'], 
-            data['location'][0], data['location'][1], data['fuel_level'], 
+            data['latitude'], data['longitude'], data['fuel_level'], 
             data['engine_temp'], 
             data['battery_voltage'], data['mileage'], 
             data['oil_level'], data['driving_mode'], 
