@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, approx_count_distinct, window,avg
+from pyspark.sql.functions import from_json, col, approx_count_distinct, window,avg,to_json ,struct,current_timestamp
 from pyspark.sql.types import StructType, StructField, StringType, FloatType, TimestampType, DoubleType
 
 if __name__ == "__main__":
@@ -40,20 +40,78 @@ if __name__ == "__main__":
                 .select(from_json(col("value"), cars_schema).alias("data")) \
                 .select("data.*")
 
-        # Add a watermark for late-arriving data
-        # cars_df_with_watermark = cars_df \
-        #         .withWatermark("timestamp", "1 minute")  # Set the watermark threshold (1 minute)
 
-        # Perform aggregation
-        result_df = cars_df.filter(col("speed")>100)
 
-        # Write the result to the console
-        query_raw = result_df.writeStream \
-                .outputMode("append") \
-                .format("console") \
-                .start()
+                # Get overspeeding cars with timestamp
+        overspeeding_cars = cars_df.filter(col("speed") > 100) \
+                .withColumn("value", to_json(struct("vehicle_id", "speed", "timestamp")))
 
-        query_raw.awaitTermination()
+        # Get low fuel cars with timestamp
+        low_fuel_cars = cars_df.filter(col("fuel_level") < 10) \
+                .withColumn("value", to_json(struct("vehicle_id", "fuel_level", "timestamp")))
+
+
+
+        # Average speed for each car with timestamp
+        avg_speed_each_car = cars_df.groupBy("vehicle_id") \
+                .agg(avg("speed").alias("avg_speed_each_car")) \
+                .withColumn("current_timestamp", current_timestamp()) \
+                .withColumn("value", to_json(struct("vehicle_id", "avg_speed_each_car", "current_timestamp")))
+
+        # Average oil level for each car with timestamp
+        avg_oil_level_each_car = cars_df.groupBy("vehicle_id") \
+                .agg(avg("oil_level").alias("avg_oil_level_each_car")) \
+                .withColumn("current_timestamp", current_timestamp()) \
+                .withColumn("value", to_json(struct("vehicle_id", "avg_oil_level_each_car", "current_timestamp")))
+
+        # Get the number of cars and average speed
+        overall_stats = cars_df.agg(
+                approx_count_distinct("vehicle_id").alias("distinct_cars_count"),
+                avg("speed").alias("average_speed")
+        ).withColumn("value", to_json(struct("distinct_cars_count", "average_speed")))
+
+          # Write the results to Kafka
+        def write_to_kafka(df, topic,i):
+                return df.selectExpr("CAST(value AS STRING)") \
+                        .writeStream \
+                        .format("kafka") \
+                        .option("kafka.bootstrap.servers", "localhost:9092") \
+                        .option("topic", topic) \
+                        .option("checkpointLocation", f'/home/blm/learning/cars_stream_project /Real-time-Stream-Processing-System-with-Kafka-and-PySpark/checkpoints/checkpoint1{i}') \
+                        .outputMode("update") \
+                        .start()
+
+        overspeeding_query = write_to_kafka(overspeeding_cars, "overspeeding_cars",1)
+        low_fuel_query = write_to_kafka(low_fuel_cars, "low_fuel_cars",2)
+        overall_stats_query = write_to_kafka(overall_stats, "overall_stats",3)
+        avg_speed_query = write_to_kafka(avg_speed_each_car, "avg_speed_each_car",4)
+        avg_oil_level_query = write_to_kafka(avg_oil_level_each_car, "avg_oil_level_each_car",5)
+
+        spark.streams.awaitAnyTermination()
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # # Perform aggregation
+        # # result_df = cars_df.filter(col("speed")>100)
+        # car_avg_fuel=cars_df.groupBy("vehicle_id").agg(avg("oil_level").alias("avg_oil_level_each_car"))
+
+        # # Write the result to the console
+        # query_raw = car_avg_fuel.writeStream \
+        #         .outputMode("complete") \
+        #         .format("console") \
+        #         .start()
+
+        # query_raw.awaitTermination()
 
         
 
@@ -78,3 +136,14 @@ if __name__ == "__main__":
         #         .start()
 
         # query_raw.awaitTermination()
+
+
+        # ************** 
+        #average speed for each car 
+        # car_avg_speed=cars_df.groupBy("vehicle_id").agg(avg("speed").alias("avg_speed_each_car"))
+
+        #***********************
+        #avg fuel of each car 
+        # car_avg_fuel=cars_df.groupBy("vehicle_id").agg(avg("oil_level").alias("avg_oil_level_each_car"))
+
+
